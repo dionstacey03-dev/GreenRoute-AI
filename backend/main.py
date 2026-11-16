@@ -7,7 +7,7 @@ import os
 from typing import Literal
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -134,7 +134,7 @@ def health_check():
     return {"status": "healthy", "service": "GreenRoute API", "version": "2.1.0"}
 
 @app.get("/api/geocode")
-async def geocode_location(q: str = Field(min_length=2, max_length=150)):
+async def geocode_location(q: str = Query(min_length=2, max_length=150)):
     query = q.strip()
     if len(query) < 2:
         raise HTTPException(status_code=400, detail="Location must contain at least 2 characters.")
