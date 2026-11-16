@@ -50,7 +50,7 @@ class RoadRouteRequest(BaseModel):
     destination_longitude: float = Field(ge=-180, le=180)
 
 WEIGHTS = {
-    "greenest": {"time": .15, "cost": .15, "co2": .60, "reliability": .10},
+    "greenest": {"time": .05, "cost": .05, "co2": .80, "reliability": .10},
     "fastest": {"time": .65, "cost": .10, "co2": .10, "reliability": .15},
     "cheapest": {"time": .10, "cost": .65, "co2": .15, "reliability": .10},
     "balanced": {"time": .30, "cost": .25, "co2": .30, "reliability": .15},
