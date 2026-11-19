@@ -1,4 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@clerk/react";
+import { authenticatedApiRequest } from "./auth/api";
 
 import {
 
@@ -96,6 +98,7 @@ const preferences = [
 // =========================================================
 
 function App() {
+  const { getToken, isLoaded: clerkLoaded, isSignedIn } = useAuth();
   const requestInProgress = useRef(false);
   const [activePage, setActivePage] = useState("dashboard");
   const [from, setFrom] = useState("");
@@ -106,13 +109,56 @@ function App() {
 const [routes, setRoutes] = useState([]);
 
 const [routeMetadata, setRouteMetadata] = useState(null);
-const [savedTrips, setSavedTrips] = useState(() => {
-  try {
-    const parsed = JSON.parse(localStorage.getItem("greenroute:v2.2:trips") || "[]");
-    return Array.isArray(parsed) ? parsed.slice(0, 100).filter(t => t && typeof t.id === "string") : [];
-  } catch { return []; }
-});
+const [savedTrips, setSavedTrips] = useState([]);
 const [saveMessage, setSaveMessage] = useState("");
+const [journeySyncStatus, setJourneySyncStatus] = useState("loading");
+const [journeySyncError, setJourneySyncError] = useState("");
+
+useEffect(() => {
+  let active = true;
+  if (!clerkLoaded) return undefined;
+  if (!isSignedIn) {
+    setJourneySyncStatus("signed-out");
+    setSavedTrips([]);
+    return undefined;
+  }
+
+  const loadCloudJourneys = async () => {
+    setJourneySyncStatus("loading");
+    setJourneySyncError("");
+    try {
+      await authenticatedApiRequest("/api/me", getToken);
+      const result = await authenticatedApiRequest("/api/journeys", getToken);
+      if (!active) return;
+      const items = Array.isArray(result?.items) ? result.items : [];
+      setSavedTrips(items.map((item) => ({
+        id: item.id,
+        createdAt: item.created_at,
+        origin: item.origin,
+        destination: item.destination,
+        name: item.route_name,
+        preference: item.preference,
+        distance: Number(item.distance_km) || 0,
+        time: Number(item.duration_minutes) || 0,
+        cost: Number(item.estimated_cost_lkr) || 0,
+        co2: Number(item.estimated_co2_kg) || 0,
+        score: Number(item.green_score) || 0,
+        rankingScore: Number(item.ranking_score) || 0,
+        costSaving: Number(item.estimated_cost_difference_lkr) || 0,
+        carbonSaving: Number(item.estimated_co2_difference_kg) || 0,
+        storage: "cloud",
+      })));
+      setJourneySyncStatus("ready");
+    } catch (error) {
+      if (!active) return;
+      setJourneySyncStatus("error");
+      setJourneySyncError(error.message || "Unable to load your saved journeys.");
+    }
+  };
+
+  loadCloudJourneys();
+  return () => { active = false; };
+}, [clerkLoaded, isSignedIn, getToken]);
 
 const [selectedRouteId, setSelectedRouteId] = useState(null);
 
@@ -307,39 +353,90 @@ const [error, setError] = useState("");
     ? Math.max(0, directRoad.cost - referenceRoute.cost)
     : null;
 
-  const persistTrips = (next) => {
+  const saveJourney = async () => {
+    if (!selectedRoute || !routeMetadata || !directRoad) return;
+    if (journeySyncStatus !== "ready") {
+      setSaveMessage("Your cloud journey history is not ready yet. Please wait and try again.");
+      return;
+    }
+
+    setSaveMessage("");
     try {
-      localStorage.setItem("greenroute:v2.2:trips", JSON.stringify(next));
-      setSavedTrips(next);
-      setSaveMessage("");
-    } catch {
-      setSaveMessage("Unable to save journeys in browser storage. Check privacy/storage settings.");
+      const saved = await authenticatedApiRequest("/api/journeys", getToken, {
+        method: "POST",
+        body: JSON.stringify({
+          origin: from.trim(),
+          destination: destination.trim(),
+          route_name: selectedRoute.name,
+          preference,
+          distance_km: Number(routeMetadata.distance_km) || 0,
+          duration_minutes: Number(selectedRoute.time) || 0,
+          estimated_cost_lkr: Number(selectedRoute.cost) || 0,
+          estimated_co2_kg: Number(selectedRoute.co2) || 0,
+          green_score: Number(selectedRoute.score) || 0,
+          ranking_score: Number(selectedRoute.ranking_score) || 0,
+          estimated_cost_difference_lkr: Math.max(0, Number(directRoad.cost) - Number(selectedRoute.cost)),
+          estimated_co2_difference_kg: Math.max(0, Number(directRoad.co2) - Number(selectedRoute.co2)),
+        }),
+      });
+      const trip = {
+        id: saved.id,
+        createdAt: saved.created_at,
+        origin: saved.origin,
+        destination: saved.destination,
+        name: saved.route_name,
+        preference: saved.preference,
+        distance: Number(saved.distance_km) || 0,
+        time: Number(saved.duration_minutes) || 0,
+        cost: Number(saved.estimated_cost_lkr) || 0,
+        co2: Number(saved.estimated_co2_kg) || 0,
+        score: Number(saved.green_score) || 0,
+        rankingScore: Number(saved.ranking_score) || 0,
+        costSaving: Number(saved.estimated_cost_difference_lkr) || 0,
+        carbonSaving: Number(saved.estimated_co2_difference_kg) || 0,
+        storage: "cloud",
+      };
+      setSavedTrips((current) => [trip, ...current]);
+      setSaveMessage("Journey saved securely to your account.");
+    } catch (error) {
+      setSaveMessage(error.message || "Unable to save this journey to your account.");
     }
   };
 
-  const saveJourney = () => {
-    if (!selectedRoute || !routeMetadata || !directRoad) return;
-    const trip = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      createdAt: new Date().toISOString(),
-      origin: from.trim(),
-      destination: destination.trim(),
-      name: selectedRoute.name,
-      preference,
-      distance: Number(routeMetadata.distance_km) || 0,
-      time: Number(selectedRoute.time) || 0,
-      cost: Number(selectedRoute.cost) || 0,
-      co2: Number(selectedRoute.co2) || 0,
-      score: Number(selectedRoute.score) || 0,
-      costSaving: Math.max(0, Number(directRoad.cost) - Number(selectedRoute.cost)),
-      carbonSaving: Math.max(0, Number(directRoad.co2) - Number(selectedRoute.co2)),
-    };
-    persistTrips([trip, ...savedTrips].slice(0, 100));
+  const deleteJourney = async (id) => {
+    setSaveMessage("");
+    try {
+      await authenticatedApiRequest(`/api/journeys/${encodeURIComponent(id)}`, getToken, { method: "DELETE" });
+      setSavedTrips((current) => current.filter((trip) => trip.id !== id));
+    } catch (error) {
+      setSaveMessage(error.message || "Unable to delete this saved journey.");
+    }
   };
 
-  const deleteJourney = (id) => persistTrips(savedTrips.filter(t => t.id !== id));
-  const clearJourneys = () => {
-    if (window.confirm("Clear all locally saved GreenRoute journeys?")) persistTrips([]);
+  const clearJourneys = async () => {
+    if (!savedTrips.length || !window.confirm("Delete all saved journeys from your GreenRoute account?")) return;
+    setSaveMessage("");
+    try {
+      await Promise.all(savedTrips.map((trip) =>
+        authenticatedApiRequest(`/api/journeys/${encodeURIComponent(trip.id)}`, getToken, { method: "DELETE" })
+      ));
+      setSavedTrips([]);
+      setSaveMessage("Your cloud journey history has been cleared.");
+    } catch (error) {
+      setSaveMessage(error.message || "Some journeys could not be deleted. Refresh the list and try again.");
+      try {
+        const result = await authenticatedApiRequest("/api/journeys", getToken);
+        setSavedTrips((result.items || []).map((item) => ({
+          id: item.id, createdAt: item.created_at, origin: item.origin, destination: item.destination,
+          name: item.route_name, preference: item.preference, distance: Number(item.distance_km) || 0,
+          time: Number(item.duration_minutes) || 0, cost: Number(item.estimated_cost_lkr) || 0,
+          co2: Number(item.estimated_co2_kg) || 0, score: Number(item.green_score) || 0,
+          rankingScore: Number(item.ranking_score) || 0,
+          costSaving: Number(item.estimated_cost_difference_lkr) || 0,
+          carbonSaving: Number(item.estimated_co2_difference_kg) || 0, storage: "cloud",
+        })));
+      } catch { /* Keep the existing list visible if refresh also fails. */ }
+    }
   };
   // Export browser-local estimates without sending them to a server.
   const exportJourneysCsv = () => {
@@ -1321,9 +1418,10 @@ const [error, setError] = useState("");
                        <> Locally saved journeys: {savedTrips.length}; estimated CO₂ difference: {totalCarbon.toFixed(2)} kg; estimated cost difference: Rs. {Math.round(totalCost)}. These are not verified savings.</>
                      )}
                    </p>
-                   <button className="select-route" type="button" onClick={saveJourney} disabled={!selectedRoute}>
-                     Save selected journey locally
+                   <button className="select-route" type="button" onClick={saveJourney} disabled={!selectedRoute || journeySyncStatus !== "ready"}>
+                     {journeySyncStatus === "loading" ? "Connecting account..." : "Save journey to account"}
                    </button>
+                   {journeySyncStatus === "error" && <p role="alert" className="demo-notice">Cloud journey sync unavailable: {journeySyncError}</p>}
                    {saveMessage && <p role="alert" className="demo-notice">{saveMessage}</p>}
                    <div style={{ marginTop: 22, overflowX: "auto" }}>
                      <h3 style={{ marginBottom: 12 }}>Compare route estimates</h3>
@@ -1451,7 +1549,9 @@ const [error, setError] = useState("");
 
             <section id="carbon-tracker" className="planner-card" style={{ marginTop: 24, scrollMarginTop: 24 }} aria-label="Carbon tracker">
               <div className="planner-heading"><div><p className="section-label">CARBON TRACKER</p><h2>Saved journey estimates</h2></div><Leaf size={28} /></div>
-              <p className="demo-notice">Saved only in this browser (up to 100 journeys). These are modeled differences compared with the direct-road estimate, not verified environmental savings or completed-trip records.</p>
+              <p className="demo-notice">Your saved journeys are stored in your signed-in GreenRoute account. These are modeled differences compared with the direct-road estimate, not verified environmental savings or completed-trip records. Existing history from earlier browser-only versions remains in that browser and is not automatically uploaded.</p>
+              {journeySyncStatus === "loading" && <p className="demo-notice">Loading your secure journey history...</p>}
+              {journeySyncStatus === "error" && <p role="alert" className="demo-notice">Cloud sync error: {journeySyncError}</p>}
               <div className="stats-grid" style={{ margin: "18px 0" }}>
                 <div className="stat-card"><div><p>Saved journeys</p><h3>{savedTrips.length}</h3></div></div>
                 <div className="stat-card"><div><p>Estimated CO₂ difference</p><h3>{totalCarbon.toFixed(2)} kg</h3></div></div>
@@ -1523,7 +1623,7 @@ const [error, setError] = useState("");
                 </div>
                 <button type="button" onClick={exportJourneysCsv} disabled={!savedTrips.length} style={{ marginTop: 12, marginRight: 10, background: "#176647", border: "1px solid #29996a", borderRadius: 8, color: "#ffffff", padding: "10px 14px", cursor: "pointer" }}>Export journeys (CSV)</button>
                 <button type="button" onClick={clearJourneys} style={{ marginTop: 12, background: "transparent", border: "1px solid #27614a", borderRadius: 8, color: "#d9f9e9", padding: "10px 14px", cursor: "pointer" }}>Clear journey history</button>
-              </> : <p style={{ color: "#a9c7b8" }}>No saved journeys yet. Find a route, select it, and choose “Save selected journey locally”.</p>}
+              </> : <p style={{ color: "#a9c7b8" }}>No cloud journeys yet. Find a route, select it, and choose “Save journey to account”.</p>}
               {saveMessage && <p role="alert">{saveMessage}</p>}
             </section>
 
