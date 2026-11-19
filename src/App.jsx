@@ -344,7 +344,7 @@ const [error, setError] = useState("");
     setError("");
   };
 
-  const directRoad = routes.find((route) => route.id === 3);
+  const directRoad = routes.find((route) => route.id === "direct-road" || route.name === "Direct Road");
   const referenceRoute = selectedRoute;
   const carbonSaving = directRoad && referenceRoute
     ? Math.max(0, directRoad.co2 - referenceRoute.co2)
