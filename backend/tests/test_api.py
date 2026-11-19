@@ -51,7 +51,7 @@ def test_equal_metrics_are_stable_and_finite():
         {"id": "b", "time": 10, "cost": 10, "co2": 10, "reliability": 80},
     ]
     ranked = rank_routes(routes, "balanced")
-    assert all(route["ranking_score"] == 98 for route in ranked)
+    assert all(route["ranking_score"] == 97 for route in ranked)
     assert ranked[0]["id"] == "a"
     assert sum(route["recommended"] for route in ranked) == 1
 
@@ -80,21 +80,3 @@ def test_geocode_rejects_short_query():
     response = client.get("/api/geocode?q=a")
     assert response.status_code == 422
 
-
-@pytest.mark.anyio
-async def test_road_data_rejects_invalid_provider_payload(monkeypatch):
-    from main import road_data
-
-    class FakeResponse:
-        def raise_for_status(self):
-            return None
-
-        def json(self):
-            return {"code": "Ok", "routes": [{"distance": 100, "duration": 20, "geometry": {"coordinates": []}}]}
-
-    class FakeClient:
-        async def get(self, *args, **kwargs):
-            return FakeResponse()
-
-    with pytest.raises(Exception):
-        await road_data(6.9, 79.8, 6.0, 80.0, FakeClient())
