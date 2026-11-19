@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.exc import SQLAlchemyError
 
 from database import check_database_connection, database_is_configured
+from journeys import router as journeys_router
 
 VERSION = "3.0.0"
 NOMINATIM_URL = os.getenv("NOMINATIM_URL", "https://nominatim.openstreetmap.org/search")
@@ -47,6 +48,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
+app.include_router(journeys_router)
 
 Preference = Literal["fastest", "cheapest", "greenest", "balanced"]
 

@@ -135,3 +135,22 @@ V3 should add persistent user data, verified transit integrations, reproducible 
 ## License
 
 No license has been declared yet. All rights remain with the repository owner unless a license is added.
+
+
+## Clerk authentication and saved journeys (V3 Phase 3)
+
+The React application uses Clerk for sign-in and session management. FastAPI verifies Clerk session tokens with the official `clerk-backend-api` SDK. Neon stores only the application's user mapping and saved journey data; passwords and Clerk session tokens are never stored in the application database.
+
+Configure `backend/.env` from `backend/.env.example` with:
+- `DATABASE_URL`: Neon connection string.
+- `CLERK_SECRET_KEY`: Clerk development secret key (backend only).
+- `CLERK_JWT_KEY`: optional PEM JWT public key from Clerk Dashboard; recommended for networkless token verification.
+- `CORS_ORIGINS`: exact frontend origins. These are also the Clerk authorized-party allow-list.
+
+Authenticated API:
+- `GET /api/me`: map the verified Clerk subject to a local application user.
+- `GET /api/journeys`: list only the current user's saved journeys.
+- `POST /api/journeys`: save a journey for the current user.
+- `DELETE /api/journeys/{journey_id}`: delete only a journey owned by the current user.
+
+Run `python -m alembic upgrade head` after updating the backend. Never expose Clerk secret or JWT keys through `VITE_*` variables or commit real credentials.
