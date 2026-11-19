@@ -45,6 +45,8 @@ class SavedJourneyCreate(BaseModel):
     estimated_co2_kg: float = Field(ge=0, le=1000000)
     green_score: float = Field(ge=0, le=100)
     ranking_score: float = Field(ge=0, le=100)
+    estimated_cost_difference_lkr: float = Field(default=0, ge=0, le=100000000)
+    estimated_co2_difference_kg: float = Field(default=0, ge=0, le=1000000)
 
 
 def _local_user(db: Session, identity: ClerkIdentity) -> User:
@@ -81,6 +83,8 @@ def _journey_payload(journey: SavedJourney) -> dict:
         "estimated_co2_kg": journey.estimated_co2_kg,
         "green_score": journey.green_score,
         "ranking_score": journey.ranking_score,
+        "estimated_cost_difference_lkr": journey.estimated_cost_difference_lkr,
+        "estimated_co2_difference_kg": journey.estimated_co2_difference_kg,
         "created_at": journey.created_at.isoformat() if isinstance(journey.created_at, datetime) else None,
     }
 

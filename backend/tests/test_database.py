@@ -76,3 +76,8 @@ def test_alembic_initial_migration_creates_expected_tables(tmp_path, monkeypatch
             ).fetchall()
         }
     assert {"users", "saved_journeys", "alembic_version"}.issubset(tables)
+    with sqlite3.connect(database_path) as connection:
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(saved_journeys)")}
+        revision = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+    assert {"estimated_cost_difference_lkr", "estimated_co2_difference_kg"}.issubset(columns)
+    assert revision == "0003_journey_differences"
