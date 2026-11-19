@@ -6,12 +6,16 @@ Set DATABASE_URL to a PostgreSQL/Neon connection string to enable persistence.
 from __future__ import annotations
 
 import os
+
+from dotenv import load_dotenv
 from functools import lru_cache
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.engine.url import URL as SQLAlchemyURL
 from sqlalchemy.orm import sessionmaker
+
+load_dotenv()
 
 
 def _database_url() -> str | URL:
