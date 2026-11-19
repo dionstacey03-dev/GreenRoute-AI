@@ -14,7 +14,7 @@ from models import Base
 
 @pytest.fixture
 def client_and_identity():
-    engine = create_engine("sqlite+pysqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine(\n        "sqlite+pysqlite:///:memory:",\n        connect_args={"check_same_thread": False},\n        poolclass=StaticPool,\n    )
     Base.metadata.create_all(engine)
     TestingSession = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     identity = {"value": ClerkIdentity("user_test_a", {"sub": "user_test_a"})}

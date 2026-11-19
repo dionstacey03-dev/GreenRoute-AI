@@ -12,14 +12,18 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("users", sa.Column("clerk_user_id", sa.String(length=255), nullable=True))
-    op.create_index("ix_users_clerk_user_id", "users", ["clerk_user_id"], unique=True)
-    op.alter_column("users", "email", existing_type=sa.String(length=320), nullable=True)
-    op.alter_column("users", "password_hash", existing_type=sa.String(length=255), nullable=True)
+    # Batch mode keeps this migration portable to SQLite test databases while
+    # producing ordinary ALTER TABLE operations on PostgreSQL.
+    with op.batch_alter_table("users") as batch:
+        batch.add_column(sa.Column("clerk_user_id", sa.String(length=255), nullable=True))
+        batch.alter_column("email", existing_type=sa.String(length=320), nullable=True)
+        batch.alter_column("password_hash", existing_type=sa.String(length=255), nullable=True)
+        batch.create_index("ix_users_clerk_user_id", ["clerk_user_id"], unique=True)
 
 
 def downgrade() -> None:
-    op.alter_column("users", "password_hash", existing_type=sa.String(length=255), nullable=False)
-    op.alter_column("users", "email", existing_type=sa.String(length=320), nullable=False)
-    op.drop_index("ix_users_clerk_user_id", table_name="users")
-    op.drop_column("users", "clerk_user_id")
+    with op.batch_alter_table("users") as batch:
+        batch.alter_column("password_hash", existing_type=sa.String(length=255), nullable=False)
+        batch.alter_column("email", existing_type=sa.String(length=320), nullable=False)
+        batch.drop_index("ix_users_clerk_user_id")
+        batch.drop_column("clerk_user_id")

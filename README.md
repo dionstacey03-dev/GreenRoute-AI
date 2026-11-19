@@ -139,7 +139,7 @@ No license has been declared yet. All rights remain with the repository owner un
 
 ## Clerk authentication and saved journeys (V3 Phase 3)
 
-The React application uses Clerk for sign-in and session management. FastAPI verifies Clerk session tokens with the official `clerk-backend-api` SDK. Neon stores only the application's user mapping and saved journey data; passwords and Clerk session tokens are never stored in the application database.
+The FastAPI authentication layer is being integrated with Clerk. The backend verifies Clerk session tokens with the official `clerk-backend-api` SDK; the React sign-in UI and API client integration are the next frontend implementation step. Neon stores only the application's user mapping and saved journey data; passwords and Clerk session tokens are never stored in the application database.
 
 Configure `backend/.env` from `backend/.env.example` with:
 - `DATABASE_URL`: Neon connection string.
