@@ -21,7 +21,8 @@ An eco-conscious route comparison prototype for Sri Lanka. GreenRoute V3 combine
 - Compare fastest, cheapest, greenest and balanced preferences.
 - View an OSRM driving route on a Leaflet map with street, satellite, and hybrid layers.
 - Save journey estimates locally in the browser; review analytics and export CSV.
-- FastAPI health, metadata, geocoding, route comparison and road-route endpoints.
+- FastAPI health, database-readiness, metadata, geocoding, route comparison and road-route endpoints.
+- PostgreSQL/Neon-ready SQLAlchemy models for users and owner-scoped saved journeys, managed through Alembic migrations.
 
 ## Architecture
 
@@ -51,6 +52,7 @@ uvicorn main:app --reload --port 8000
 
 - API health: http://127.0.0.1:8000/api/health
 - API metadata: http://127.0.0.1:8000/api/meta
+- Database readiness: http://127.0.0.1:8000/api/health/database
 - Interactive API docs: http://127.0.0.1:8000/docs
 
 ### Frontend
@@ -70,6 +72,7 @@ Vite normally serves the app at http://localhost:5173.
 
 ### Backend
 
+- `DATABASE_URL`: PostgreSQL/Neon connection string. Use the provider's SSL-enabled connection string; never commit credentials.
 - `CORS_ORIGINS`: comma-separated exact frontend origins. Do not include paths, trailing slashes or wildcard origins.
 - `NOMINATIM_URL`: optional Nominatim-compatible search endpoint.
 - `OSRM_URL`: optional OSRM-compatible routing base URL.
@@ -82,11 +85,25 @@ The API must be deployed separately from a static Vite frontend unless the hosti
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/` | Service status and version |
-| GET | `/api/health` | Health check |
+| GET | `/api/health` | API health check |
+| GET | `/api/health/database` | Database readiness (does not expose credentials) |
 | GET | `/api/meta` | Provider and data-confidence metadata |
 | GET | `/api/geocode?q=...` | Sri Lankan location lookup |
 | POST | `/api/road-route` | OSRM driving route geometry |
 | POST | `/api/routes` | Preference-ranked route estimates |
+
+## PostgreSQL setup and migrations
+
+1. Create a PostgreSQL database (Neon is supported).
+2. Copy `backend/.env.example` to `backend/.env` and set `DATABASE_URL` to your provider's SSL-enabled connection string. Do not commit `.env`.
+3. From the `backend` directory, install dependencies and apply the schema:
+
+```bash
+pip install -r requirements.txt
+alembic upgrade head
+```
+
+The first migration creates `users` and `saved_journeys`. Saved journeys are linked to a user with cascading deletion. The database models are intentionally not exposed through public CRUD routes yet; authenticated, owner-scoped access is part of the next phase. The browser-local history remains unchanged until that phase is ready.
 
 ## Tests
 
