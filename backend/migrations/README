@@ -1,0 +1,22 @@
+# Database migrations
+
+Install backend dependencies, configure `DATABASE_URL`, then run:
+
+```bash
+alembic upgrade head
+```
+
+To inspect the current revision:
+
+```bash
+alembic current
+```
+
+To roll back the initial schema:
+
+```bash
+alembic downgrade base
+```
+
+Never commit a real database URL or credentials. Saved journey rows are user-owned
+and must only be accessed through authenticated, owner-scoped API operations.
