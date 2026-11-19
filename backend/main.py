@@ -14,6 +14,9 @@ import httpx
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy.exc import SQLAlchemyError
+
+from database import check_database_connection, database_is_configured
 
 VERSION = "3.0.0"
 NOMINATIM_URL = os.getenv("NOMINATIM_URL", "https://nominatim.openstreetmap.org/search")
@@ -191,6 +194,17 @@ def root():
 @app.get("/api/health")
 def health_check():
     return {"status": "healthy", "service": "GreenRoute API", "version": VERSION}
+
+
+@app.get("/api/health/database")
+def database_health():
+    if not database_is_configured():
+        return {"status": "not_configured", "configured": False, "provider": "postgresql"}
+    try:
+        check_database_connection()
+    except SQLAlchemyError:
+        raise HTTPException(status_code=503, detail="Database is unavailable.")
+    return {"status": "connected", "configured": True, "provider": "postgresql"}
 
 
 @app.get("/api/meta")
