@@ -123,7 +123,7 @@ npm run build
 
 ## Known limitations and next V3 phases
 
-- There is no authentication, PostgreSQL persistence or cloud trip synchronisation yet.
+- There is no authentication or authenticated cloud trip synchronisation yet. PostgreSQL models and migrations are prepared, but no user journey records are being stored until owner-scoped authentication is implemented.
 - Public transit is not connected to a verified Sri Lankan GTFS, operator or timetable feed.
 - Fares and emissions are illustrative models; no measured carbon or confirmed fare feed is connected.
 - Public Nominatim and OSRM endpoints are subject to provider policies, rate limits and availability. Production should use appropriately hosted services and comply with their terms.
