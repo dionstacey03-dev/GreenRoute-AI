@@ -4,9 +4,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from auth import ClerkIdentity, require_clerk_user
-from database import get_session_factory
 from journeys import get_db
 from main import app
 from models import Base
@@ -14,7 +14,11 @@ from models import Base
 
 @pytest.fixture
 def client_and_identity():
-    engine = create_engine(\n        "sqlite+pysqlite:///:memory:",\n        connect_args={"check_same_thread": False},\n        poolclass=StaticPool,\n    )
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(engine)
     TestingSession = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     identity = {"value": ClerkIdentity("user_test_a", {"sub": "user_test_a"})}
@@ -31,10 +35,12 @@ def client_and_identity():
 
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[require_clerk_user] = override_identity
-    with TestClient(app) as client:
-        yield client, identity
-    app.dependency_overrides.clear()
-    engine.dispose()
+    try:
+        with TestClient(app) as client:
+            yield client, identity
+    finally:
+        app.dependency_overrides.clear()
+        engine.dispose()
 
 
 def test_saved_journeys_are_private_to_the_authenticated_clerk_user(client_and_identity):
