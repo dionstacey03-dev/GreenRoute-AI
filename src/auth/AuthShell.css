@@ -1,0 +1,105 @@
+.gr-auth-layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 460px);
+  align-items: center;
+  gap: clamp(36px, 8vw, 120px);
+  padding: clamp(28px, 7vw, 100px);
+  color: #e9f7ef;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(37, 126, 86, .25), transparent 34%),
+    linear-gradient(135deg, #071a13 0%, #0b2419 55%, #102d20 100%);
+}
+
+.gr-auth-intro { max-width: 680px; }
+.gr-auth-eyebrow {
+  margin: 0 0 24px;
+  color: #8be0b1;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .2em;
+}
+.gr-auth-intro h1 {
+  margin: 0;
+  font-size: clamp(42px, 6vw, 76px);
+  line-height: 1.02;
+  letter-spacing: -.055em;
+}
+.gr-auth-description {
+  max-width: 520px;
+  margin: 28px 0;
+  color: #b8d3c4;
+  font-size: 17px;
+  line-height: 1.7;
+}
+.gr-auth-points {
+  display: grid;
+  gap: 12px;
+  color: #8fbaa2;
+  font-size: 13px;
+  letter-spacing: .06em;
+}
+.gr-auth-card {
+  width: 100%;
+  max-width: 460px;
+  justify-self: end;
+  padding: 22px;
+  border: 1px solid rgba(139, 224, 177, .22);
+  border-radius: 22px;
+  background: rgba(4, 17, 11, .78);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .28);
+}
+.gr-auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.gr-auth-tabs button {
+  min-height: 42px;
+  border: 1px solid #294d3b;
+  border-radius: 10px;
+  color: #b9d3c4;
+  background: transparent;
+  cursor: pointer;
+}
+.gr-auth-tabs button.active {
+  border-color: #64c991;
+  color: #f0fff6;
+  background: #174b32;
+}
+.gr-authenticated { min-height: 100vh; }
+.gr-user-control {
+  position: fixed;
+  top: 16px;
+  right: 18px;
+  z-index: 1000;
+  padding: 7px;
+  border: 1px solid rgba(100, 201, 145, .25);
+  border-radius: 999px;
+  background: rgba(5, 25, 16, .92);
+}
+.gr-auth-config {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #e9f7ef;
+  background: #071a13;
+}
+.gr-auth-config section {
+  max-width: 560px;
+  padding: 36px;
+  border: 1px solid #315c46;
+  border-radius: 18px;
+  background: #0d261a;
+}
+.gr-auth-config h1 { margin: 0 0 16px; font-size: 30px; }
+.gr-auth-config p { color: #bfd6c8; line-height: 1.7; }
+.gr-auth-config code { color: #a5edc3; }
+.gr-auth-config-note { margin-top: 22px; font-size: 13px; }
+@media (max-width: 850px) {
+  .gr-auth-layout { grid-template-columns: 1fr; gap: 32px; padding: 32px 18px; }
+  .gr-auth-card { justify-self: center; }
+  .gr-auth-intro h1 { font-size: clamp(42px, 12vw, 62px); }
+}
