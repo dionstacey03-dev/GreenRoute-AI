@@ -65,6 +65,8 @@ jobs:
         env:
           DATABASE_URL: postgresql+psycopg://greenroute:greenroute_test@localhost:5432/greenroute_test
       - name: Verify migrated schema and revision
+        env:
+          DATABASE_URL: postgresql+psycopg://greenroute:greenroute_test@localhost:5432/greenroute_test
         run: |
           python - <<'PY'
           from sqlalchemy import inspect, text
