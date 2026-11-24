@@ -47,6 +47,8 @@ class SavedJourney(Base):
     estimated_co2_kg: Mapped[float] = mapped_column(Float, nullable=False)
     green_score: Mapped[float] = mapped_column(Float, nullable=False)
     ranking_score: Mapped[float] = mapped_column(Float, nullable=False)
+    estimated_cost_difference_lkr: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    estimated_co2_difference_kg: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     user: Mapped[User] = relationship(back_populates="saved_journeys")

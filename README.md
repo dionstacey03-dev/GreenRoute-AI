@@ -20,7 +20,7 @@ An eco-conscious route comparison prototype for Sri Lanka. GreenRoute V3 combine
 - Search Sri Lankan origin and destination locations.
 - Compare fastest, cheapest, greenest and balanced preferences.
 - View an OSRM driving route on a Leaflet map with street, satellite, and hybrid layers.
-- Save journey estimates locally in the browser; review analytics and export CSV.
+- Sign in with Clerk, save journey estimates to your Neon-backed account, review analytics and export CSV.
 - FastAPI health, database-readiness, metadata, geocoding, route comparison and road-route endpoints.
 - PostgreSQL/Neon-ready SQLAlchemy models for users and owner-scoped saved journeys, managed through Alembic migrations.
 
@@ -30,7 +30,7 @@ An eco-conscious route comparison prototype for Sri Lanka. GreenRoute V3 combine
 - Backend: Python, FastAPI, Pydantic, HTTPX.
 - Geocoding: OpenStreetMap Nominatim.
 - Road routing: configurable OSRM endpoint (public demo by default).
-- Saved journeys: browser localStorage (not cloud-synchronised).
+- Saved journeys: Clerk-authenticated FastAPI endpoints backed by PostgreSQL/Neon. Legacy browser-only history remains in localStorage and is not automatically uploaded.
 
 ## Run locally
 
@@ -91,6 +91,10 @@ The API must be deployed separately from a static Vite frontend unless the hosti
 | GET | `/api/geocode?q=...` | Sri Lankan location lookup |
 | POST | `/api/road-route` | OSRM driving route geometry |
 | POST | `/api/routes` | Preference-ranked route estimates |
+| GET | `/api/me` | Provision and return the authenticated application user |
+| GET | `/api/journeys` | List only the signed-in user’s saved journeys |
+| POST | `/api/journeys` | Save a journey for the signed-in user |
+| DELETE | `/api/journeys/{journey_id}` | Delete only a journey owned by the signed-in user |
 
 ## PostgreSQL setup and migrations
 
@@ -103,7 +107,7 @@ pip install -r requirements.txt
 alembic upgrade head
 ```
 
-The first migration creates `users` and `saved_journeys`. Saved journeys are linked to a user with cascading deletion. The database models are intentionally not exposed through public CRUD routes yet; authenticated, owner-scoped access is part of the next phase. The browser-local history remains unchanged until that phase is ready.
+The migrations create `users` and `saved_journeys`, including Clerk identity mapping and comparison metrics. Apply all migrations with `alembic upgrade head`. Saved journey endpoints require a verified Clerk session and always scope reads and deletes to the authenticated application user.
 
 ## Tests
 
@@ -123,7 +127,7 @@ npm run build
 
 ## Known limitations and next V3 phases
 
-- There is no authentication or authenticated cloud trip synchronisation yet. PostgreSQL models and migrations are prepared, but no user journey records are being stored until owner-scoped authentication is implemented.
+- Older browser-local journey history is retained in localStorage but is not automatically migrated to the cloud; export it from the earlier version before clearing that browser data.
 - Public transit is not connected to a verified Sri Lankan GTFS, operator or timetable feed.
 - Fares and emissions are illustrative models; no measured carbon or confirmed fare feed is connected.
 - Public Nominatim and OSRM endpoints are subject to provider policies, rate limits and availability. Production should use appropriately hosted services and comply with their terms.
@@ -139,7 +143,7 @@ No license has been declared yet. All rights remain with the repository owner un
 
 ## Clerk authentication and saved journeys (V3 Phase 3)
 
-The FastAPI authentication layer is being integrated with Clerk. The backend verifies Clerk session tokens with the official `clerk-backend-api` SDK; the React sign-in UI and API client integration are the next frontend implementation step. Neon stores only the application's user mapping and saved journey data; passwords and Clerk session tokens are never stored in the application database.
+The FastAPI authentication layer verifies Clerk session tokens with the official `clerk-backend-api` SDK. The React app uses Clerk’s session token for authenticated API requests. Neon stores only the application user mapping and saved journey data; passwords and Clerk session tokens are never stored in the application database.
 
 Configure `backend/.env` from `backend/.env.example` with:
 - `DATABASE_URL`: Neon connection string.
@@ -148,9 +152,11 @@ Configure `backend/.env` from `backend/.env.example` with:
 - `CORS_ORIGINS`: exact frontend origins. These are also the Clerk authorized-party allow-list.
 
 Authenticated API:
-- `GET /api/me`: map the verified Clerk subject to a local application user.
-- `GET /api/journeys`: list only the current user's saved journeys.
-- `POST /api/journeys`: save a journey for the current user.
+- `GET /api/me`: provision or return the application user mapped to the verified Clerk subject.
+- `GET /api/journeys`: list only the current user’s saved journeys.
+- `POST /api/journeys`: save a journey and its estimated comparison differences for the current user.
 - `DELETE /api/journeys/{journey_id}`: delete only a journey owned by the current user.
+
+The frontend loads the signed-in user’s cloud history and writes new saved journeys to the API. Existing browser-only history is left untouched and is not silently uploaded.
 
 Run `python -m alembic upgrade head` after updating the backend. Never expose Clerk secret or JWT keys through `VITE_*` variables or commit real credentials.

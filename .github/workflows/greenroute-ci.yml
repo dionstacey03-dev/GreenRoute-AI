@@ -35,3 +35,53 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+
+  postgres-migration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: greenroute
+          POSTGRES_PASSWORD: greenroute_test
+          POSTGRES_DB: greenroute_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U greenroute -d greenroute_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r requirements.txt
+      - name: Apply all Alembic migrations to PostgreSQL
+        run: alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+psycopg://greenroute:greenroute_test@localhost:5432/greenroute_test
+      - name: Verify migrated schema and revision
+        env:
+          DATABASE_URL: postgresql+psycopg://greenroute:greenroute_test@localhost:5432/greenroute_test
+        run: |
+          python - <<'PY'
+          from sqlalchemy import inspect, text
+          from database import get_engine
+
+          engine = get_engine()
+          inspector = inspect(engine)
+          assert "saved_journeys" in inspector.get_table_names()
+          columns = {column["name"] for column in inspector.get_columns("saved_journeys")}
+          assert {"estimated_cost_difference_lkr", "estimated_co2_difference_kg"}.issubset(columns)
+          with engine.connect() as connection:
+              revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+          assert revision == "0003_journey_differences", revision
+          print("PostgreSQL migration chain verified:", revision)
+          PY
